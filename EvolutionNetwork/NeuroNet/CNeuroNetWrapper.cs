@@ -145,6 +145,11 @@ namespace EvolutionNetwork.NeuroNet
             return false;
         }
 
+        /// <summary>
+        /// Best
+        /// </summary>
+        /// <returns></returns>
+
         public double[] Compute()
         {
             IntPtr res = __Compute(_cnet);
