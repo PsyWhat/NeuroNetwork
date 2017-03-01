@@ -11,7 +11,7 @@ using System.Linq;
 namespace EvolutionNetwork
 {
 
-    public delegate float TestFunctionDelegate(NeuroNet nnt);
+    public delegate double TestFunctionDelegate(NeuroNet nnt);
 
 
     public class Pair<A, B>
@@ -46,15 +46,15 @@ namespace EvolutionNetwork
         public int Seed;
         public int LastID;
         public int Individuals;
-        public float WeightDispersion;
-        public float MergeMutationChance = 0.5f;
-        public float a = 0.5f;
-        public float b = 0.5f;
-        public List<Pair<float, NeuroNet>> LastResult;
+        public double WeightDispersion;
+        public double MergeMutationChance = 0.5;
+        public double a = 0.5;
+        public double b = 0.5;
+        public List<Pair<double, NeuroNet>> LastResult;
         TestFunctionDelegate TestFunction;
         System.Random rand;
 
-        List<NeuroNet> _currentNets;
+        public List<NeuroNet> _currentNets;
         bool _initiated;
         int _currentGeneration;
 
@@ -67,15 +67,32 @@ namespace EvolutionNetwork
             }
         }
 
-        public float GetRandom(float min = -1.0f, float max = 1.0f)
+        public double GetRandom(double min = -1.0, double max = 1.0)
         {
-            if (max < min) { float b = max; max = min; min = b; }
-            return (float)(rand.NextDouble() * ((double)max - min) + min);
+            if (max < min) { double b = max; max = min; min = b; }
+            int ns = 1000000000;
+            int hj = 123;
+            lock (rand)
+            {
+                hj = rand.Next(ns + 1);
+            }
+            double res = (double)(((double)hj / (double)ns) * ((double)max - min) + min);
+            return res;
+        }
+
+        public int GetRandomInt(int max)
+        {
+            int res;
+            lock (rand)
+            {
+                res = rand.Next(max);
+            }
+            return res;
         }
 
 
 
-        public EvolutionTeaching(int inputs, int outputs, int seed, int individuals, TestFunctionDelegate testFunction, float weightDispersion = 10.0f,float a = 0.5f,float b = 0.5f)
+        public EvolutionTeaching(int inputs, int outputs, int seed, int individuals, TestFunctionDelegate testFunction, double weightDispersion = 10.0, double a = 0.5, double b = 0.5)
         {
             this.a = a;
             this.b = b;
@@ -87,13 +104,13 @@ namespace EvolutionNetwork
             this.Seed = seed;
             rand = new System.Random(seed);
             _initiated = false;
-            if (weightDispersion > 0.0f)
+            if (weightDispersion > 0.0)
             {
                 WeightDispersion = weightDispersion;
             }
             else
             {
-                WeightDispersion = 1.0f;
+                WeightDispersion = 1.0;
             }
         }
 
@@ -102,7 +119,7 @@ namespace EvolutionNetwork
             return LastID++;
         }
 
-        public NeuroNet GenerateNeuroNet(int additionalNodes = 0, int additionalConnections = 2)
+        public NeuroNet GenerateNeuroNet(int additionalNodes = 0, int additionalConnections = 1)
         {
             NeuroNet res = new NeuroNet(Inputs, Outputs);
             List<Node> nn = new List<Node>();
@@ -118,14 +135,14 @@ namespace EvolutionNetwork
 
             for (int i = 0; i < additionalNodes; ++i)
             {
-                res.AddConnection(GetNewID(), avF[rand.Next(avF.Count)].ID, nn[i].ID, GetRandom(-WeightDispersion, WeightDispersion));
-                res.AddConnection(GetNewID(), nn[i].ID, avT[rand.Next(avT.Count)].ID, GetRandom(-WeightDispersion, WeightDispersion));
+                res.AddConnection(GetNewID(), avF[GetRandomInt(avF.Count)].ID, nn[i].ID, GetRandom(-WeightDispersion, WeightDispersion));
+                res.AddConnection(GetNewID(), nn[i].ID, avT[GetRandomInt(avT.Count)].ID, GetRandom(-WeightDispersion, WeightDispersion));
             }
 
             for (int i = 0; i < additionalConnections; ++i)
             {
 
-                res.AddConnection(GetNewID(), avF[rand.Next(avF.Count)].ID, avT[rand.Next(avT.Count)].ID, GetRandom(-WeightDispersion, WeightDispersion));
+                res.AddConnection(GetNewID(), avF[GetRandomInt(avF.Count)].ID, avT[GetRandomInt(avT.Count)].ID, GetRandom(-WeightDispersion, WeightDispersion));
             }
 
             return res;
@@ -168,7 +185,7 @@ namespace EvolutionNetwork
                     }
                     else if (!con.Active == !x.Active)
                     {
-                        if (GetRandom(0.0f, 1.0f) < MergeMutationChance)
+                        if (GetRandom(0.0, 1.0) < MergeMutationChance)
                         {
                             x.Active = !x.Active;
                         }
@@ -181,75 +198,6 @@ namespace EvolutionNetwork
 
 
         List<Connection> _generationConnections;
-
-        public void StructureMutation(NeuroNet nn,float fun)
-        {
-            Mutation m = new Mutation();
-            m.PrevParentFun = nn.ParentResult;
-
-            long maxLen = nn.Inputs * (nn.Nodes.Count - nn.Inputs) + (nn.Nodes.Count - nn.Inputs) * (nn.Nodes.Count - nn.Inputs);
-            float fully = (float)((double)nn.Connections.Count / (double)maxLen);
-            if(GetRandom(0.0f,1.0f) > fully)
-            {
-                m.Type = MutationType.AddConnection;
-                var avT = nn.Nodes.Where(x => !x.IsInput).ToList();
-                int f;int t;
-                do 
-                {
-                    f = nn.Nodes[rand.Next(nn.Nodes.Count)].ID;
-                    t = avT[rand.Next(avT.Count)].ID;
-                } while (nn.Connections.All(x=>x.From != f && x.To != t));
-                Connection con = new Connection(GetNewID(), f, t, GetRandom(-WeightDispersion, WeightDispersion));
-                m.NewConnection = con;
-                m.PreviousAge = nn.Age;
-
-                nn.Connections.Add(con);
-
-            }else
-            {
-                m.Type = MutationType.AddNode;
-                Connection sel = nn.Connections[rand.Next(nn.Connections.Count)];
-                nn.Connections.Remove(sel);
-                Node n = new Node(nn.Nodes.Count);
-                nn.Nodes.Add(n);
-                Connection con1 = new Connection(GetNewID(), nn.Nodes[rand.Next(nn.Nodes.Count)].ID, n.ID, GetRandom(-WeightDispersion, WeightDispersion));
-
-                var avT = nn.Nodes.Where(x => !x.IsInput).ToList();
-
-                Connection con2 = new Connection(GetNewID(), n.ID, avT[rand.Next(avT.Count)].ID, GetRandom(-WeightDispersion, WeightDispersion));
-
-                nn.Connections.Add(con1);
-                nn.Connections.Add(con2);
-
-                m.RemovedConnection = sel;
-                m.AdditionalNode = n;
-                m.NewConnection = con1;
-                m.NewConnection2 = con2;
-
-
-            }
-
-            nn.ParentResult = fun;
-            nn.Age = 0;
-            nn.MutationsDone.Enqueue(m);
-
-
-        }
-
-        public void WeightMutation(NeuroNet nn)
-        {
-            Mutation m = new Mutation { WeightChanges = new List<Tuple<Connection, float>>(), Type = MutationType.WeightChange };
-
-            foreach(Connection c in nn.Connections)
-            {
-                float change = GetRandom(-this.WeightDispersion, this.WeightDispersion);
-                m.WeightChanges.Add(new Tuple<Connection, float>(c,change));
-                c.Weight += change;
-            }
-
-            nn.MutationsDone.Enqueue(m);
-            nn.Age += 1;
-        }
 
         public void MutateAddNode(NeuroNet nn)
         {
@@ -267,7 +215,7 @@ namespace EvolutionNetwork
                 int ind = 0;
                 do
                 {
-                    ind = rand.Next(nn.Connections.Count);
+                    ind = GetRandomInt(nn.Connections.Count);
                 } while (!nn.Connections[ind].Active);
                 Connection con = nn.Connections[ind];
                 con.Active = false;
@@ -304,8 +252,8 @@ namespace EvolutionNetwork
             int t = 0;
             do
             {
-                f = avF[rand.Next(avF.Count)].ID;
-                t = avT[rand.Next(avT.Count)].ID;
+                f = avF[GetRandomInt(avF.Count)].ID;
+                t = avT[GetRandomInt(avT.Count)].ID;
             } while (nn.Connections.Exists(x => x.From == f && x.To == t));
 
             Connection ex = _generationConnections.Find(x => x.From == f && x.To == t);
@@ -324,6 +272,21 @@ namespace EvolutionNetwork
 
         }
 
+
+
+        public void LoadNet(NeuroNet nn)
+        {
+            if (nn.Inputs == this.Inputs && nn.Outputs == this.Outputs)
+            {
+                lock (_currentNets)
+                {
+                    _currentNets.Add(nn);
+                }
+                Individuals += 1;
+            }
+        }
+
+
         public void Init()
         {
             _currentNets = new List<NeuroNet>();
@@ -337,9 +300,9 @@ namespace EvolutionNetwork
             _initiated = true;
         }
 
-        public List<Pair<float, NeuroNet>> PassTests()
+        public List<Pair<double, NeuroNet>> PassTests()
         {
-            List<Pair<float, NeuroNet>> result = new List<Pair<float, NeuroNet>>();
+            List<Pair<double, NeuroNet>> result = new List<Pair<double, NeuroNet>>();
 
             List<Thread> pool = new List<Thread>();
 
@@ -347,7 +310,7 @@ namespace EvolutionNetwork
             {
                 Thread t = new Thread(() =>
                 {
-                    var v = new Pair<float, NeuroNet>(TestFunction(x), x);
+                    var v = new Pair<double, NeuroNet>(TestFunction(x), x);
                     lock (result)
                     {
                         result.Add(v);
@@ -366,7 +329,7 @@ namespace EvolutionNetwork
         }
 
 
-        NeuroNet GetNeuroFromList(List<Pair<float, NeuroNet>> list, float number)
+        NeuroNet GetNeuroFromList(List<Pair<double, NeuroNet>> list, double number)
         {
             for (int i = 0; i < list.Count; ++i)
             {
@@ -378,37 +341,203 @@ namespace EvolutionNetwork
             return list[list.Count - 1].b;
         }
 
+        public double record = 0.0;
+        public bool UndoneEnabled = true;
+        public double scoreLim = -20.0;
+
+        public void WeightMutation(NeuroNet nn)
+        {
+            Mutation m = new Mutation { WeightChanges = new List<Tuple<Connection, double>>(), Type = MutationType.WeightChange };
+            m.PrevParentFun = nn.LastResult;
+
+            foreach (Connection c in nn.Connections)
+            {
+                double change = GetRandom(-this.WeightDispersion, this.WeightDispersion) * (double)(1 / Math.Pow(nn.OperationsAfterSM, 0.05));
+                m.WeightChanges.Add(new Tuple<Connection, double>(c, change));
+                c.Weight += change;
+            }
+
+            nn.OperationsAfterSM++;
+            nn.MutationsDone.Push(m);
+            nn.Age += 1;
+        }
+
+        public void StructureMutation(NeuroNet nn, double fun)
+        {
+            Mutation m = new Mutation();
+            m.PrevParentFun = nn.ParentResult;
+
+            long maxLen = nn.Inputs * (nn.Nodes.Count - nn.Inputs) + (nn.Nodes.Count - nn.Inputs) * (nn.Nodes.Count - nn.Inputs);
+            double fully = (double)Math.Pow(((double)nn.Connections.Count / (double)maxLen), 4);
+            double rands = GetRandom(0.0, 1.0);
+            if (rands > fully)
+            {
+                m.Type = MutationType.AddConnection;
+                var avT = nn.Nodes.Where(x => !x.IsInput).ToList();
+                int f; int t;
+                do
+                {
+                    f = nn.Nodes[GetRandomInt(nn.Nodes.Count)].ID;
+                    t = avT[GetRandomInt(avT.Count)].ID;
+                } while (nn.Connections.Exists(x => x.From == f && x.To == t));
+                Connection con = new Connection(GetNewID(), f, t, GetRandom(-WeightDispersion, WeightDispersion));
+                m.NewConnection = con;
+
+                nn.Connections.Add(con);
+
+            }
+            else
+            {
+                m.Type = MutationType.AddNode;
+                Connection sel = nn.Connections[GetRandomInt(nn.Connections.Count)];
+                nn.Connections.Remove(sel);
+                Node n = new Node(nn.Nodes.Count);
+                Connection con1 = new Connection(GetNewID(), sel.From, n.ID, GetRandom(-WeightDispersion, WeightDispersion));
+
+                var avT = nn.Nodes.Where(x => !x.IsInput).ToList();
+
+                Connection con2 = new Connection(GetNewID(), n.ID, sel.To, GetRandom(-WeightDispersion, WeightDispersion));
+
+                nn.Connections.Add(con1);
+                nn.Connections.Add(con2);
+                nn.Nodes.Add(n);
+
+                m.RemovedConnection = sel;
+                m.AdditionalNode = n;
+                m.NewConnection = con1;
+                m.NewConnection2 = con2;
+
+
+            }
+
+            nn.Copies = 0;
+            nn.OperationsAfterSM = 1;
+            m.PreviousAge = nn.Age;
+            nn.ParentResult = fun;
+            nn.Age = 0;
+            nn.MutationsDone.Push(m);
+
+
+        }
+
         public void PassGeneration()
         {
             var results = PassTests();
-            LastResult = results;
-
+            results.Sort((x, y) =>
+            {
+                if (x.a > y.a)
+                {
+                    return 1;
+                }
+                else if (x.a == y.a)
+                {
+                    return 0;
+                }
+                else
+                {
+                    return -1;
+                }
+            });
+            LastResult = new List<Pair<double, NeuroNet>>();
             Parallel.ForEach(results, x =>
              {
-                 float mdF = x.a - x.b.LastResult;
-                 if(mdF < 0.0f)
+                 bool undone = false;
+                 bool rec = false;
+                 double mdF = x.a - x.b.LastResult;
+                 if (mdF < scoreLim && UndoneEnabled)
                  {
-                     x.b.UndoChanges();
+                     if (x.b.MutationsDone.Peek().Type == MutationType.WeightChange)
+                     {
+                         x.b.UndoChanges();
+                         undone = true;
+                         x.a = x.b.LastResult;
+                     }
                  }
-                 float dF = x.a - x.b.ParentResult;
-                 float Psm = (this.a * dF) / (this.b * (x.b.Age+1));
 
-
-
-                 x.b.LastResult = x.a;
-                 if (GetRandom(0.0f,1.0f) < Psm)
+                 if (x.a > record)
                  {
-                     StructureMutation(x.b,x.a);
-                 }else
+                     record = x.a;
+                     lock (_currentNets)
+                     {
+                         x.b.Copies += 1;
+                         NeuroNet nn = new NeuroNet(x.b);
+                         nn.Age = 0;
+                         nn.OperationsAfterSM = 1;
+                         this._currentNets.Add(nn);
+                         this._currentNets.Remove(results[0].b);
+
+                     }
+                     rec = true;
+                 }
+
+                 /*if (x.b == results[results.Count - 1].b)
+                 {
+                     rec = true;
+                 }*/
+
+
+                 if (true || !undone || x.b.OperationsAfterSM > (x.b.Connections.Count + x.b.Nodes.Count))
+                 {
+
+                     if (rec)
+                     {
+                         if (x.b.Copies / (double)Individuals < 0.1)
+                         {
+                             lock (_currentNets)
+                             {
+                                 x.b.Copies += 1;
+                                 NeuroNet nn = new NeuroNet(x.b);
+                                 nn.Age = 0;
+                                 nn.OperationsAfterSM = 1;
+                                 this._currentNets.Add(nn);
+                                 this._currentNets.Remove(results[0].b);
+
+                             }
+                         }
+                     }
+
+                     double dF = x.a - x.b.ParentResult;
+                     double Psm = ((x.b.Connections.Count + x.b.Nodes.Count) + Math.Abs(this.a * dF)) / (this.b * (x.b.Age + 1));
+
+                     if (GetRandom(0.0, 1.0) > Psm)
+                     {
+
+                         StructureMutation(x.b, x.a);
+                     }
+                     else
+                     {
+                         WeightMutation(x.b);
+                     }
+
+                     x.b.LastResult = x.a;
+                 }
+                 else
                  {
                      WeightMutation(x.b);
                  }
-
-                 x.b.LastResult = x.a;
              });
 
+            results.ForEach(x => LastResult.Add(x));
+
+            LastResult.Sort((x, y) =>
+            {
+                if (x.a > y.a)
+                {
+                    return 1;
+                }
+                else if (x.a == y.a)
+                {
+                    return 0;
+                }
+                else
+                {
+                    return -1;
+                }
+            });
+
+
+
             _currentGeneration++;
-            LastResult = results;
         }
 
 

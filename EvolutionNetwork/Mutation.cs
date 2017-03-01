@@ -17,11 +17,11 @@ namespace EvolutionNetwork
     {
         public MutationType Type;
 
-        public float PrevParentFun;
+        public double PrevParentFun;
         public int PreviousAge;
         public Connection RemovedConnection;
         public Node AdditionalNode;
-        public List<Tuple<Connection,float>> WeightChanges;
+        public List<Tuple<Connection,double>> WeightChanges;
         public Connection NewConnection;
         public Connection NewConnection2;
     }

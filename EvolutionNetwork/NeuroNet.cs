@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using System.Linq;
 
 
 namespace EvolutionNetwork
@@ -12,10 +13,10 @@ namespace EvolutionNetwork
         public int ID;
         public int From;
         public int To;
-        public float Weight;
+        public double Weight;
         public bool Active;
 
-        public Connection(int id, int from, int to, float weight, bool active = true)
+        public Connection(int id, int from, int to, double weight, bool active = true)
         {
             ID = id;
             From = from;
@@ -46,12 +47,12 @@ namespace EvolutionNetwork
             return string.Format("Node:\t[{0}]",ID);
         }
 
-        public float Value;
+        public double Value;
         public int ID;
         public bool IsInput;
         public bool calculated;
         public bool calculating;
-        public float Sum;
+        public double Sum;
 
         public Node(int id, bool isInput = false)
         {
@@ -83,10 +84,13 @@ namespace EvolutionNetwork
         List<Node> inputs;
         public int Inputs;
         public int Outputs;
+        public int OperationsAfterSM = 0;
         public int Age;
-        public float ParentResult = 0.0f;
-        public float LastResult = 0.0f;
-        public Queue<Mutation> MutationsDone;
+        public int Copies = 0;
+        public double ParentResult = 0;
+        public double LastResult = 0;
+        public Stack<Mutation> MutationsDone;
+        public Stack<Mutation> _undoneMutations;
 
 
 
@@ -94,22 +98,28 @@ namespace EvolutionNetwork
         {
             if(MutationsDone.Count > 0)
             {
-                Mutation m = MutationsDone.Dequeue();
+                Mutation m = MutationsDone.Pop();
                 if(m.Type == MutationType.WeightChange)
                 {
                     foreach (var v in m.WeightChanges)
                     {
                         v.Item1.Weight -= v.Item2;
                     }
+                    this.LastResult = m.PrevParentFun;
+                    //this.Age -= 1;
                 }else if(m.Type == MutationType.AddConnection)
                 {
                     Connections.Remove(m.NewConnection);
-                }else if(m.Type == MutationType.AddNode)
+                    this.Age = m.PreviousAge;
+                }
+                else if(m.Type == MutationType.AddNode)
                 {
                     Connections.Remove(m.NewConnection);
                     Connections.Remove(m.NewConnection2);
                     Nodes.Remove(m.AdditionalNode);
                     Connections.Add(m.RemovedConnection);
+
+                    this.Age = m.PreviousAge;
                 }
                 return true;
             }
@@ -118,7 +128,7 @@ namespace EvolutionNetwork
 
         public NeuroNet(int inputs, int outputs, int Age = 0)
         {
-            MutationsDone = new Queue<Mutation>();
+            MutationsDone = new Stack<Mutation>();
             Nodes = new List<Node>();
             this.outputs = new List<Node>();
             this.inputs = new List<Node>();
@@ -142,7 +152,12 @@ namespace EvolutionNetwork
 
         public NeuroNet(NeuroNet copy)
         {
-            MutationsDone = new Queue<Mutation>();
+            MutationsDone = new Stack<Mutation>();
+
+            var r = copy.MutationsDone.ToArray();
+
+
+            Copies = copy.Copies;
             Nodes = new List<Node>();
             outputs = new List<Node>();
             inputs = new List<Node>();
@@ -151,6 +166,16 @@ namespace EvolutionNetwork
             copy.Nodes.ForEach(x =>
             {
                 Node n = new Node(x);
+
+                
+                for(int i = 0;i<r.Length;++i)
+                {
+                    if(r[i].AdditionalNode == x)
+                    {
+                        r[i].AdditionalNode = n;
+                    }
+                }
+
                 Nodes.Add(n);
                 if (x.ID < Inputs)
                 {
@@ -164,12 +189,45 @@ namespace EvolutionNetwork
             });
 
             Connections = new List<Connection>();
-            copy.Connections.ForEach(x => Connections.Add(new Connection(x)));
+
+
+            copy.Connections.ForEach(x =>
+            {
+                Connection c = new Connection(x);
+
+                for(int i = 0;i<r.Length;++i)
+                {
+                    if(r[i].NewConnection == x)
+                    {
+                        r[i].NewConnection = c;
+                    }
+                    if (r[i].NewConnection2 == x)
+                    {
+                        r[i].NewConnection2 = c;
+                    }
+                    if (r[i].RemovedConnection == x)
+                    {
+                        r[i].RemovedConnection = c;
+                    }
+                }
+
+                Connections.Add(c);
+            });
+
+
+
+
+
+
+            for (int i = 0; i < r.Length; ++i)
+            {
+                MutationsDone.Push(r[i]);
+            }
 
 
         }
 
-        public void AddConnection(int id, int from, int to, float weight, bool active = true)
+        public void AddConnection(int id, int from, int to, double weight, bool active = true)
         {
             var h = Connections.Find(x => x.From == from && x.To == to);
             if (h != null)
@@ -188,7 +246,7 @@ namespace EvolutionNetwork
             var h = Connections.Find(x => x.From == con.From && x.To == con.To);
             if (h != null)
             {
-                h.Weight = (h.Weight / 2 + con.Weight / 2);
+                h.Weight = (h.Weight + con.Weight);
             } else
             {
                 Connections.Add(new Connection(con));
@@ -267,14 +325,14 @@ namespace EvolutionNetwork
                         node.Sum += s.Value * h.Weight;
                     }
                 });
-                node.Value = 1.0f / (1.0f + (float)Math.Exp(-node.Sum));
+                node.Value = 1.0 / (1.0 + Math.Exp(-node.Sum));
                 node.Sum = 0;
                 node.calculating = false;
                 node.calculated = true;
             }
         }
 
-        public float[] Calculate(float[] inputs)
+        public double[] Calculate(double[] inputs)
         {
             Nodes.ForEach(x => { x.calculated = false; x.Sum = 0; });
             for (int i = 0; i < this.inputs.Count; ++i)
@@ -285,11 +343,11 @@ namespace EvolutionNetwork
                 }
                 else
                 {
-                    this.inputs[i].Value = 0.0f;
+                    this.inputs[i].Value = 0;
                 }
             }
             outputs.ForEach(x => Calculate(x));
-            float[] res = new float[outputs.Count];
+            double[] res = new double[outputs.Count];
             for (int i = 0; i < res.Length; ++i)
             {
                 res[i] = outputs[i].Value;
@@ -412,7 +470,7 @@ namespace EvolutionNetwork
             result.AddRange(BitConverter.GetBytes(copy.Nodes.Count - Inputs - Outputs));
             foreach (Node n in copy.Nodes)
             {
-                if (n.ID > Inputs + Outputs)
+                if (n.ID > Inputs + Outputs - 1)
                 {
                     result.AddRange(BitConverter.GetBytes(n.ID));
                     result.AddRange(BitConverter.GetBytes(n.Value));
@@ -442,7 +500,7 @@ namespace EvolutionNetwork
             for (int k = 0; k < nodesC; ++k)
             {
                 Node n = new Node(BitConverter.ToInt32(array, i)); i += 4;
-                n.Value = BitConverter.ToSingle(array, i); i += 4;
+                n.Value = BitConverter.ToDouble(array, i); i += 8;
                 result.AddNode(n);
             }
 
@@ -452,7 +510,7 @@ namespace EvolutionNetwork
                 int id = BitConverter.ToInt32(array, i); i += 4;
                 int from = BitConverter.ToInt32(array, i); i += 4;
                 int to = BitConverter.ToInt32(array, i); i += 4;
-                float weight = BitConverter.ToInt32(array, i); i += 4;
+                double weight = BitConverter.ToDouble(array, i); i += 8;
 
                 Connection c = new Connection(id, from, to, weight);
                 result.AddConnection(c);
