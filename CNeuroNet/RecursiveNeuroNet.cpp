@@ -1,6 +1,20 @@
+#pragma once
 #include "RecursiveNeuroNet.h"
 
 
+void ClearListElement( ListElement *list )
+{
+	ListElement *tmp = NULL;
+	if ( list != NULL )
+	{
+		while ( list != NULL )
+		{
+			tmp = list;
+			list = list->next;
+			MYFREE( tmp );
+		}
+	}
+}
 
 void FreeListElement( ListElement *list )
 {
@@ -11,7 +25,8 @@ void FreeListElement( ListElement *list )
 		{
 			tmp = list;
 			list = list->next;
-			free( tmp );
+			MYFREE( tmp );
+			MYFREE( tmp->element );
 		}
 	}
 }
@@ -48,29 +63,37 @@ Connection* AddConnection( NeuroNet *net , int from , int to , double weight )
 {
 	ListElement *le = NULL;
 	Connection *con = NULL;
+	Node *n1 = NULL , *n2 = NULL;
 	if ( net != NULL )
 	{
-		if ( to > net->inputsCount )
+		if ( to >= net->inputsCount )
 		{
-
-			if ( net->connections != NULL )
+			n1 = FindNodeByID( net , from );
+			n2 = FindNodeByID( net , to );
+			if ( n1 != NULL && n2 != NULL )
 			{
-				con = NewConnection( from , to , weight );
-				le = NewListElement( con );
-				if ( le == NULL )
-					return NULL;
-				le->next = net->connections;
-				net->connections = le;
-				net->connectionsCount += 1;
+				if ( net->connections != NULL )
+				{
+					con = NewConnection( n1 , n2 , weight );
+					le = NewListElement( con );
+					if ( le == NULL )
+						return NULL;
+					le->next = net->connections;
+					net->connections = le;
+					net->connectionsCount += 1;
+				} else
+				{
+					con = NewConnection( n1 , n2 , weight );
+					net->connections = NewListElement( con );
+					if ( net->connections == NULL )
+						return NULL;
+					net->connectionsCount += 1;
+				}
+				return con;
 			} else
 			{
-				con = NewConnection( from , to , weight );
-				net->connections = NewListElement( con );
-				if ( net->connections == NULL )
-					return NULL;
-				net->connectionsCount += 1;
+				return NULL;
 			}
-			return con;
 		}
 	}
 	return NULL;
@@ -89,7 +112,8 @@ double* Compute( NeuroNet* net )
 			en = net->nodes;
 			while ( en != NULL )
 			{
-				((Node*)(en->element))->state = 0;
+				n = ((Node*)(en->element));
+				n->state = 0;
 				en = en->next;
 			}
 
@@ -97,20 +121,24 @@ double* Compute( NeuroNet* net )
 			while ( en != NULL )
 			{
 				n = (Node *)(en->element);
-				if ( n->ID >= net->inputsCount
-					&& n->ID < net->inputsCount + net->outputsCount )
+				if ( n->ID >= net->inputsCount && 
+					n->ID < (net->inputsCount + net->outputsCount) )
 				{
 					ComputeNode( net , n );
 				}
+				en = en->next;
 			}
 
-			res = (double *)malloc( (sizeof( double ))*net->outputsCount );
+			res = (double *)MYALLOC( (sizeof( double ))*net->outputsCount );
 			i = 0;
+
 			en = net->outputs;
 
 			while ( en != NULL )
 			{
-				res[i++] = ((Node*)(en->element))->Value;
+				n = ((Node*)(en->element));
+				res[n->ID - net->inputsCount] = n->Value;
+				en = en->next;
 			}
 
 
@@ -123,32 +151,40 @@ double* Compute( NeuroNet* net )
 void ComputeNode( NeuroNet *net , Node *n )
 {
 	Node *toCompute = NULL;
+	Connection *c = NULL;
 	ListElement *connectionsTo = NULL;
 	ListElement *en = NULL;
+	ListElement *le  = NULL;
 	double sum = 0.0;
 	if ( net != NULL )
 	{
 		if ( net->connections != NULL && net->nodes != NULL )
 		{
-			en = connectionsTo = FindConnectionsTo( net , n->ID );
+			en = connectionsTo = FindConnectionsTo( net , n );
 
 			n->state |= (1 << 0);
 
+			en = connectionsTo;
 			while ( en != NULL )
 			{
-				toCompute = (Node *)(en->element);
+				c = (Connection *)(en->element);
+				toCompute = (Node*)(c->From);
 
-				if ( toCompute->state & ((1 << 0) | (1 << 1)) )
+				if ( toCompute->ID == c->From->ID )
 				{
-					sum += toCompute->Value;
-				} else
-				{
-					ComputeNode( net , toCompute );
-					sum += toCompute->Value;
+					if ( (toCompute->state & ((1 << 0) | (1 << 1))) || ((toCompute->ID) < (net->inputsCount)) || (toCompute->ID < (net->inputsCount + net->outputsCount)) )
+					{
+						sum += toCompute->Value * c->Weight;
+					} else
+					{
+						ComputeNode( net , toCompute );
+						sum += toCompute->Value * c->Weight;
+					}
 				}
 
 				en = en->next;
 			}
+			ClearListElement( connectionsTo );
 
 			n->Value = 1 / (1 + exp( sum ));
 
@@ -157,6 +193,117 @@ void ComputeNode( NeuroNet *net , Node *n )
 			n->state |= (1 << 1);
 		}
 	}
+}
+
+ListElement* GetConnections( NeuroNet *net )
+{
+	if ( net != NULL )
+	{
+		return net->connections;
+	}
+	return NULL;
+}
+
+ListElement* GetNodes( NeuroNet *net )
+{
+	if ( net != NULL )
+	{
+		return net->nodes;
+	}
+	return NULL;
+}
+
+int GetListLenght( ListElement *list )
+{
+	int res = 0;
+	while ( list != NULL )
+	{
+		list = list->next;
+		res++;
+	}
+	return res;
+}
+
+ListEnumerator* GetEnumerator( ListElement *list )
+{
+	ListEnumerator *res = (ListEnumerator*)MYALLOC( sizeof( ListEnumerator ) );
+	res->first = list;
+	res->current = NULL;
+	return res;
+}
+
+int EnumeratorGoNext( ListEnumerator* le )
+{
+	if ( le != NULL && le->first != NULL )
+	{
+		if ( le->current == NULL )
+		{
+			le->current = le->first;
+		} else
+		{
+			le->current = le->current->next;
+			if ( le->current == NULL )
+			{
+				return 0;
+			}
+		}
+		return 1;
+	}
+	return 0;
+}
+
+void* GetEnumeratorCurrent( ListEnumerator *le )
+{
+	if ( le != NULL && le->current != NULL )
+	{
+		return le->current->element;
+	}
+	return NULL;
+}
+
+void ResetEnumerator( ListEnumerator *le )
+{
+	if ( le != NULL )
+	{
+		le->current = NULL;
+	}
+}
+
+int GetNodeID( Node *n )
+{
+	if ( n != NULL )
+	{
+		return n->ID;
+	}
+	return -1;
+}
+
+int GetConnectionTo( Connection *c )
+{
+	if ( c != NULL )
+	{
+		return c->To->ID;
+	}
+	return -1;
+}
+
+int GetConnectionFrom( Connection *c )
+{
+	if ( c != NULL )
+	{
+		return c->From->ID;
+	}
+	return -1;
+}
+
+Connection* SetConnectionFromTo( Connection *c , Node *from , Node *to )
+{
+	if ( c != NULL )
+	{
+		c->From = from;
+		c->To = to;
+	}
+	return c;
 }
 
 double GetConnectionWeight( Connection *con )
@@ -178,7 +325,7 @@ void ChangeConnectionWeight( Connection *con , double newWeight )
 	}
 }
 
-ListElement* FindConnectionsTo( NeuroNet *net , int ToID )
+ListElement* FindConnectionsTo( NeuroNet *net , Node *node )
 {
 	Connection *tmp = NULL;
 	ListElement *lr = NULL;
@@ -195,7 +342,7 @@ ListElement* FindConnectionsTo( NeuroNet *net , int ToID )
 			while ( en != NULL )
 			{
 				tmp = (Connection*)(en->element);
-				if ( tmp->To == ToID )
+				if ( tmp->To == node )
 				{
 					if ( lr == NULL )
 					{
@@ -215,6 +362,45 @@ ListElement* FindConnectionsTo( NeuroNet *net , int ToID )
 	return NULL;
 }
 
+ListElement* FindConnectionsFrom( NeuroNet *net , int FromID )
+{
+	Connection *tmp = NULL;
+	ListElement *lr = NULL;
+	ListElement *lf = NULL;
+	ListElement *en = NULL;
+	int i;
+	if ( net != NULL )
+	{
+		if ( net->connections != NULL )
+		{
+			i = 0;
+			en = net->connections;
+
+			while ( en != NULL )
+			{
+				tmp = (Connection*)(en->element);
+				if ( tmp->To->ID == FromID )
+				{
+					if ( lr == NULL )
+					{
+						lf = lr = NewListElement( tmp );//////////////////
+					} else
+					{
+						lr->next = NewListElement( tmp );//////////////////
+						lr = lr->next;
+					}
+				}
+				en = en->next;
+			}
+
+			return lf;
+		}
+	}
+	return NULL;
+}
+
+
+
 Connection* FindConnection( NeuroNet *net , int from , int to )
 {
 	ListElement *el;
@@ -225,7 +411,7 @@ Connection* FindConnection( NeuroNet *net , int from , int to )
 		while ( el != NULL )
 		{
 			con = ((Connection*)(el->element));
-			if ( con->From == from && con->To == to )
+			if ( con->From->ID == from && con->To->ID == to )
 			{
 				return con;
 			}
@@ -251,11 +437,14 @@ Node * FindNodeByID( NeuroNet *net , int ID )
 				}
 				e = e->next;
 			} while ( e != NULL );
+
 		} else
 		{
 			return NULL;
 		}
+
 	}
+	return NULL;
 }
 
 void FreeNeuroNet( NeuroNet* net )
@@ -266,32 +455,49 @@ void FreeNeuroNet( NeuroNet* net )
 		while ( net->connections != NULL )
 		{
 			el = net->connections->next;
-			free( net->connections->element );
-			free( net->connections );
+			MYFREE( net->connections->element );
+			MYFREE( net->connections );
 			net->connections = el;
 		}
 
 		while ( net->nodes != NULL )
 		{
 			el = net->nodes->next;
-			free( net->nodes->element );
-			free( net->nodes );
+			MYFREE( net->nodes->element );
+			MYFREE( net->nodes );
 			net->nodes = el;
+			net->nodesCount--;
 		}
 
-		while ( net->nodes != NULL )
+		while ( net->outputs != NULL )
 		{
 			el = net->outputs->next;
-			free( net->nodes );
+			MYFREE( net->outputs );
 			net->outputs = el;
 		}
+
+		while ( net->inputs != NULL )
+		{
+			el = net->inputs->next;
+			MYFREE( net->inputs );
+			net->inputs = el;
+		}
+		{
+
+	}
+
+		MYFREE( net );
+#ifdef USEMYALLOC
+		NNAllocs--;
+#endif // 
+
 	}
 }
 
-Connection* NewConnection( int from , int to , double weight )
+Connection* NewConnection( Node *from , Node *to , double weight )
 {
 	Connection *res = NULL;
-	res = (Connection*)malloc( sizeof( Connection ) );
+	res = (Connection*)MYALLOC( sizeof( Connection ) );
 	if ( res != NULL )
 	{
 		res->From = from;
@@ -301,12 +507,96 @@ Connection* NewConnection( int from , int to , double weight )
 	return res;
 }
 
+
+
+
+
+#ifdef USEMYALLOC
+#undef  MYALLOC
+void* my_malloc( size_t am )
+{
+	MemBlk b;
+	void* ref = malloc( am );
+	TotalMem += am;
+	b.am = am;
+	b.pointer = ref;
+	AddMemAlloc( b );
+	Allocks++;
+	return ref;
+}
+#define MYALLOC(p) my_malloc(p)
+
+
+void AddMemAlloc( MemBlk blk )
+{
+	MLB *n = (MLB*)malloc( sizeof( MLB ) );
+	n->next = mems;
+	n->val = blk;
+	mems = n;
+}
+
+
+size_t PullMemAllocSize( void * block )
+{
+	MLB *el , *tmp = NULL;
+	size_t res;
+	el = mems;
+	while ( el != NULL )
+	{
+		if ( el->val.pointer == block )
+		{
+			res = el->val.am;
+			if ( tmp == NULL )
+			{
+				mems = el->next;
+				free( el );
+			} else
+			{
+				tmp->next = el->next;
+				free( el );
+			}
+
+			return res;
+
+		} else
+		{
+			tmp = el;
+		}
+		el = el->next;
+	}
+	return 0;
+}
+
+
+#undef  MYFREE
+void my_free( void* block )
+{
+	TotalMem -= PullMemAllocSize( block );
+	free( block );
+	Allocks--;
+}
+#define MYFREE(p) my_free(p)
+
+unsigned long long GetMemoryAllocated()
+{
+	return TotalMem;
+}
+
+unsigned long long GetNeuroNetsAllocated()
+{
+	return NNAllocs;
+}
+
+
+#endif
+
 ListElement* NewListElement( void *value )
 {
+	ListElement *res;
 	if ( value != NULL )
 	{
-		ListElement *res = NULL;
-		res = (ListElement*)malloc( sizeof( ListElement ) );
+		res = NULL;
+		res = (ListElement*)MYALLOC( sizeof( ListElement ) );
 		if ( res != NULL )
 		{
 			res->element = value;
@@ -322,11 +612,11 @@ ListElement* NewListElement( void *value )
 NeuroNet* NewNeuroNet( int numInputs , int numOutputs )
 {
 	NeuroNet *res;
-	ListElement *le;
+	ListElement *le, *li;
 	Node *n;
 	int i;
 
-	res = (NeuroNet*)malloc( sizeof( NeuroNet ) );
+	res = (NeuroNet*)MYALLOC( sizeof( NeuroNet ) );
 	res->inputsCount = numInputs;
 	res->outputsCount = numOutputs;
 
@@ -337,13 +627,26 @@ NeuroNet* NewNeuroNet( int numInputs , int numOutputs )
 	res->nodes = NULL;
 	res->connections = NULL;
 	res->outputs = NULL;
+	res->inputs = NULL;
 	le = NULL;
+	li = NULL;
 
-	for ( i = 0; i < numInputs + numOutputs - 1; ++i )
+	for ( i = 0; i < numInputs + numOutputs; ++i )
 	{
 
 		n = AddNode( res , i );
-		if ( i >= numInputs )
+		if ( i < numInputs )
+		{
+			if ( li == NULL )
+			{
+				li = NewListElement( n );
+				res->inputs = li;
+			} else
+			{
+				li->next = NewListElement( n );
+				li = li->next;
+			}
+		} else
 		{
 			if ( le == NULL )
 			{
@@ -358,18 +661,21 @@ NeuroNet* NewNeuroNet( int numInputs , int numOutputs )
 		}
 	}
 
-
+#ifdef USEMYALLOC
+	NNAllocs++;
+#endif
 	return res;
 }
 
 Node* NewNode( int ID )
 {
 	Node *res = NULL;
-	res = (Node*)malloc( sizeof( Node ) );
+	res = (Node*)MYALLOC( sizeof( Node ) );
 	if ( res != NULL )
 	{
 		res->ID = ID;
 		res->Value = 0.0;
+		res->state = 0;
 	}
 	return res;
 }
@@ -377,31 +683,76 @@ Node* NewNode( int ID )
 int RemoveNode( NeuroNet *net , int ID )
 {
 	Node *n;
-	ListElement *el, *tmp = NULL;
+	ListElement *el, *tmp = NULL,*ct, *tmpc;
+	Connection *c;
 	if ( net != NULL && net->nodes != NULL )
 	{
-		el = net->nodes;
-		while ( el != NULL )
+		if ( ID > net->outputsCount + net->inputsCount -1)
 		{
-			n = (Node *)(el->element);
-			if ( n->ID == ID )
+			el = net->nodes;
+			while ( el != NULL )
 			{
-				if ( tmp != NULL )
+				n = (Node *)(el->element);
+
+
+
+				if ( n->ID == ID )
 				{
-					tmp->next = el->next;
-					free( el->element );
-					free( el );				
-				} else
-				{
-					net->nodes = el->next;
-					free( el->element );
-					free( el );
+
+
+					ct = net->connections;
+					tmpc = NULL;
+					while ( ct != NULL )
+					{
+						c = (Connection*)(ct->element);
+						if ( c->From->ID == n->ID || c->To->ID == n->ID )
+						{
+							if ( tmpc == NULL )
+							{
+								net->connections = ct->next;
+
+							} else
+							{
+								tmpc->next = ct->next;
+							}
+
+							MYFREE( ct->element );
+							MYFREE( ct );
+
+							if ( tmpc == NULL )
+							{
+								ct = net->nodes;
+							} else
+							{
+								ct = tmpc;
+							}
+						} else
+						{
+							tmpc = ct;
+						}
+						ct = ct->next;
+					}
+
+
+					if ( tmp != NULL )
+					{
+						tmp->next = el->next;
+						MYFREE( el->element );
+						MYFREE( el );
+					} else
+					{
+						net->nodes = el->next;
+						MYFREE( el->element );
+						MYFREE( el );
+					}
+					net->nodesCount -= 1;
+
+					return 1;
 				}
-				net->nodesCount -= 1;
-				return 1;
-			}
+
 			tmp = el;
-			el = el->next;
+				el = el->next;
+			}
 		}
 	}
 	return 0;
@@ -418,26 +769,161 @@ int RemoveConnection( NeuroNet *net , int from , int to )
 		{
 			c = (Connection *)(el->element);
 
-			if ( c->From == from && c->To == to )
+			if ( c->From->ID == from && c->To->ID == to )
 			{
 				if ( tmp != NULL )
 				{
 					tmp->next = el->next;
-					free( el->element );
-					free( el );
+					MYFREE( el->element );
+					MYFREE( el );
 				} else
 				{
 					net->connections = el->next;
-					free( el->element );
-					free( el );
+					MYFREE( el->element );
+					MYFREE( el );
 				}
 				net->connectionsCount -= 1;
 				return 1;
 			}
 
-			tmp = el;
+				tmp = el;
+
 			el = el->next;
 		}
 	}
 	return 0;
 }
+
+void ClearNodes( NeuroNet *net )
+{
+	ListElement *el, *tmp = NULL, *ct, *tmpc;
+	Node *n;
+	Connection *c;
+	if ( net != NULL )
+	{
+		el = net->nodes;
+		while ( el != NULL )
+		{
+			n = ((Node *)(el->element));
+			if ( n->ID > net->inputsCount + net->outputsCount - 1 )
+			{
+				ct = net->connections;
+				tmpc = NULL;
+				while ( ct != NULL )
+				{
+					c = (Connection*)(ct->element);
+					if ( c->From->ID == n->ID || c->To->ID == n->ID )
+					{
+						if ( tmpc == NULL )
+						{
+							net->connections = ct->next;
+
+						} else
+						{
+							tmpc->next = ct->next;
+						}
+
+						MYFREE( ct->element );
+						MYFREE( ct );
+
+						if ( tmpc == NULL )
+						{
+							ct = net->nodes;
+						} else
+						{
+							ct = tmpc;
+						}
+					} else
+					{
+						tmpc = ct;
+					}
+					ct = ct->next;
+				}
+
+
+
+
+				if ( tmp == NULL )
+				{
+					net->nodes = el->next;
+				} else
+				{
+					tmp->next = el->next;
+				}
+
+				MYFREE( el->element );
+				MYFREE( el );
+
+				if ( tmp == NULL )
+				{
+					el = net->nodes;
+				} else
+				{
+					el = tmp;
+				}
+
+			} else
+			{
+				tmp = el;
+			}
+			el = el->next;
+		}
+	}
+}
+
+void ClearConnections( NeuroNet *net )
+{
+	ListElement *el;
+	if ( net != NULL )
+	{
+
+		while ( net->connections != NULL )
+		{
+			el = net->connections->next;
+			MYFREE( net->connections->element );
+			MYFREE( net->connections );
+			net->connections = el;
+		}
+	}
+}
+
+int GetNodesCount( NeuroNet *net )
+{
+	if ( net != NULL )
+	{
+		return net->nodesCount;
+	}
+	return -1;
+}
+
+int GetConnectionsCount( NeuroNet *net )
+{
+
+	if ( net != NULL )
+	{
+		return net->connectionsCount;
+	}
+	return -1;
+}
+
+void InitInputs( NeuroNet* net , double *values )
+{
+	ListElement *le;
+	Node *n;
+	if ( net != NULL && net->inputs != NULL )
+	{
+		le = net->inputs;
+		while ( le != NULL )
+		{
+			n = (Node*)(le->element);
+
+			if ( n != NULL )
+			{
+				n->Value = values[n->ID];
+			}
+
+			le = le->next;
+		}
+	}
+}
+

@@ -296,7 +296,7 @@ namespace EvolutionNetwork
 
                                 if (buff1 != null)
                                 {
-                                    NeuroNet net = NeuroNet.FromByteArray(buff1);
+                                    CSNeuroNet net = CSNeuroNet.FromByteArray(buff1);
 
 
                                     Console.WriteLine("Readed: {0}, Save it?", net);
@@ -346,7 +346,7 @@ namespace EvolutionNetwork
                                 buff1 = new byte[160000];
                                 f.Seek(0, SeekOrigin.Begin);
                                 f.Read(buff1, 0, buff1.Length);
-                                NeuroNet j = NeuroNet.FromByteArray(buff1);
+                                CSNeuroNet j = CSNeuroNet.FromByteArray(buff1);
                                 Console.WriteLine("Checking saved nn: {0}", j);
                                 f.Close();
                             }
@@ -359,7 +359,7 @@ namespace EvolutionNetwork
                         {
                             if (isselected)
                             {
-                                NeuroNet n = t.ET.LastResult[selected].b;
+                                CSNeuroNet n = t.ET.LastResult[selected].b;
                                 double r = t.Test(t.ET.LastResult[selected].b);
                                 Console.WriteLine("Test passed with F:{0}, Last result was: {1}", r, n.LastResult);
                             }
@@ -372,7 +372,7 @@ namespace EvolutionNetwork
                         {
                             if (isselected)
                             {
-                                NeuroNet net = new NeuroNet(t.ET.LastResult[selected].b);
+                                CSNeuroNet net = new CSNeuroNet(t.ET.LastResult[selected].b);
                                 net.Optimize();
                                 Console.WriteLine("Optimized: {0}", net);
                             }

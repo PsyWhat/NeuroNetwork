@@ -76,7 +76,7 @@ namespace EvolutionNetwork
 
     }
 
-    public class NeuroNet
+    public class CSNeuroNet
     {
         public List<Connection> Connections;
         public List<Node> Nodes;
@@ -89,46 +89,13 @@ namespace EvolutionNetwork
         public int Copies = 0;
         public double ParentResult = 0;
         public double LastResult = 0;
-        public Stack<Mutation> MutationsDone;
-        public Stack<Mutation> _undoneMutations;
 
 
 
-        public bool UndoChanges()
+
+
+        public CSNeuroNet(int inputs, int outputs, int Age = 0)
         {
-            if(MutationsDone.Count > 0)
-            {
-                Mutation m = MutationsDone.Pop();
-                if(m.Type == MutationType.WeightChange)
-                {
-                    foreach (var v in m.WeightChanges)
-                    {
-                        v.Item1.Weight -= v.Item2;
-                    }
-                    this.LastResult = m.PrevParentFun;
-                    //this.Age -= 1;
-                }else if(m.Type == MutationType.AddConnection)
-                {
-                    Connections.Remove(m.NewConnection);
-                    this.Age = m.PreviousAge;
-                }
-                else if(m.Type == MutationType.AddNode)
-                {
-                    Connections.Remove(m.NewConnection);
-                    Connections.Remove(m.NewConnection2);
-                    Nodes.Remove(m.AdditionalNode);
-                    Connections.Add(m.RemovedConnection);
-
-                    this.Age = m.PreviousAge;
-                }
-                return true;
-            }
-            return false;
-        }
-
-        public NeuroNet(int inputs, int outputs, int Age = 0)
-        {
-            MutationsDone = new Stack<Mutation>();
             Nodes = new List<Node>();
             this.outputs = new List<Node>();
             this.inputs = new List<Node>();
@@ -150,11 +117,9 @@ namespace EvolutionNetwork
             }
         }
 
-        public NeuroNet(NeuroNet copy)
+        public CSNeuroNet(CSNeuroNet copy)
         {
-            MutationsDone = new Stack<Mutation>();
-
-            var r = copy.MutationsDone.ToArray();
+            
 
 
             Copies = copy.Copies;
@@ -168,13 +133,6 @@ namespace EvolutionNetwork
                 Node n = new Node(x);
 
                 
-                for(int i = 0;i<r.Length;++i)
-                {
-                    if(r[i].AdditionalNode == x)
-                    {
-                        r[i].AdditionalNode = n;
-                    }
-                }
 
                 Nodes.Add(n);
                 if (x.ID < Inputs)
@@ -194,22 +152,7 @@ namespace EvolutionNetwork
             copy.Connections.ForEach(x =>
             {
                 Connection c = new Connection(x);
-
-                for(int i = 0;i<r.Length;++i)
-                {
-                    if(r[i].NewConnection == x)
-                    {
-                        r[i].NewConnection = c;
-                    }
-                    if (r[i].NewConnection2 == x)
-                    {
-                        r[i].NewConnection2 = c;
-                    }
-                    if (r[i].RemovedConnection == x)
-                    {
-                        r[i].RemovedConnection = c;
-                    }
-                }
+                
 
                 Connections.Add(c);
             });
@@ -217,12 +160,7 @@ namespace EvolutionNetwork
 
 
 
-
-
-            for (int i = 0; i < r.Length; ++i)
-            {
-                MutationsDone.Push(r[i]);
-            }
+            
 
 
         }
@@ -232,7 +170,7 @@ namespace EvolutionNetwork
             var h = Connections.Find(x => x.From == from && x.To == to);
             if (h != null)
             {
-                h.Weight = (h.Weight / 2 + weight / 2);
+
             }
             else
             {
@@ -246,7 +184,7 @@ namespace EvolutionNetwork
             var h = Connections.Find(x => x.From == con.From && x.To == con.To);
             if (h != null)
             {
-                h.Weight = (h.Weight + con.Weight);
+
             } else
             {
                 Connections.Add(new Connection(con));
@@ -460,7 +398,7 @@ namespace EvolutionNetwork
 
         public byte[] ToByteArray()
         {
-            NeuroNet copy = new NeuroNet(this);
+            CSNeuroNet copy = new CSNeuroNet(this);
             //copy.Optimize();
             List<byte> result = new List<byte>();
 
@@ -488,13 +426,13 @@ namespace EvolutionNetwork
             return result.ToArray();
         }
 
-        public static NeuroNet FromByteArray(byte[] array)
+        public static CSNeuroNet FromByteArray(byte[] array)
         {
             int i = 0;
             int inputsc = BitConverter.ToInt32(array, i); i += 4;
             int outputsc = BitConverter.ToInt32(array, i); i += 4;
 
-            NeuroNet result = new NeuroNet(inputsc, outputsc);
+            CSNeuroNet result = new CSNeuroNet(inputsc, outputsc);
 
             int nodesC = BitConverter.ToInt32(array, i); i += 4;
             for (int k = 0; k < nodesC; ++k)

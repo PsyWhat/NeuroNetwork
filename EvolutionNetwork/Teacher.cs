@@ -17,7 +17,7 @@ namespace EvolutionNetwork
 
         double record = 0.0;
 
-        public double Test(NeuroNet nn)
+        public double Test(CSNeuroNet nn)
         {
 
             Vector2 pos = new Vector2(0.0, 10.0);
@@ -136,7 +136,7 @@ namespace EvolutionNetwork
             return overall;
         }
 
-        public NeuroNet neuro;
+        public CSNeuroNet neuro;
 
         public bool pause;
 
@@ -146,12 +146,12 @@ namespace EvolutionNetwork
             this.ET = new EvolutionTeaching(13, 2, seed, individuals, Test, dispersion, a, b);
         }
 
-        public Dictionary<int, Tuple<double, NeuroNet>> BestFromPasses;
+        public Dictionary<int, Tuple<double, CSNeuroNet>> BestFromPasses;
 
         // Use this for initialization
         public void Start(int passes)
         {
-            BestFromPasses = new Dictionary<int, Tuple<double, NeuroNet>>();
+            BestFromPasses = new Dictionary<int, Tuple<double, CSNeuroNet>>();
             ET.Init();
 
             for (int i = 0; i < passes; ++i)
@@ -177,7 +177,7 @@ namespace EvolutionNetwork
                 });
                 var max = ET.LastResult[ET.LastResult.Count-1];
 
-                BestFromPasses.Add(i, new Tuple<double, NeuroNet>(max.a,max.b));
+                BestFromPasses.Add(i, new Tuple<double, CSNeuroNet>(max.a,max.b));
                 Console.WriteLine("Minimum is: {0:F5}, Maximum: {1:F5}, medium: {2:F5}", ET.LastResult.Min(x => x.a), max.a, ET.LastResult.ConvertAll(x => x.a).Average(x => x));
                 Console.WriteLine("Best net: {0}", max.b);
                 Console.WriteLine("Pass {0} have been passed", i);

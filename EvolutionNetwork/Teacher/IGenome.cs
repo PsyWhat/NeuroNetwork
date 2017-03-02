@@ -10,6 +10,13 @@ namespace EvolutionNetwork.Teacher
     public interface IGenome<GenomeType>
     {
 
+
+        /// <summary>
+        /// Copies current IGenome
+        /// </summary>
+        /// <returns>Copy of the IGenome</returns>
+        IGenome<GenomeType> Copy();
+
         /// <summary>
         /// Number of total non structural mutations done.
         /// </summary>
@@ -21,13 +28,13 @@ namespace EvolutionNetwork.Teacher
         /// <summary>
         /// Number of total structural mutations done in the whole family.
         /// </summary>
-        int TotalStructuralMutations
+        int TotalNonStructuralMutations
         {
             get;
         }
 
         /// <summary>
-        /// Number of structural mutations done by this specific genome.
+        /// Number of structural mutations done by this specific genome family.
         /// </summary>
         int StructuralMutations
         {

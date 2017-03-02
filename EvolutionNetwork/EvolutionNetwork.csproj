@@ -117,8 +117,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="NeuroNet\CNeuroNetWrapper.cs" />
+    <Compile Include="NeuroNet\CNeuroNetWrapperFunctions.cs" />
     <Compile Include="Teacher\GenericTeacher.cs" />
     <Compile Include="Teacher\IGeneticTeacher.cs" />
+    <Compile Include="Teacher\NeuroNetGenome.cs" />
     <Compile Include="TestProgram.cs" />
     <None Include="Mutation.cs" />
     <Compile Include="Teacher\IGenome.cs" />
@@ -130,7 +132,7 @@
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
-    <None Include="NeuroNet.cs" />
+    <Compile Include="CSNeuroNet.cs" />
     <None Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <None Include="Teacher.cs" />

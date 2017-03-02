@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -21,18 +22,92 @@ public class GenericTeacher<GT> : IGeneticTeacher<GT>
 
         Random random;
 
-        List<IGenome<GT>> _currentPopulation;
+        List<IGenome<GT>> _currentPopulation = null;
 
-        SortedList<double, IGenome<GT>> _lastTests;
+        SortedList<double, IGenome<GT>> _lastTests  = null;
 
         Dictionary<int, SortedList<double, IGenome<GT>>> _generationHistory;
 
-        int _currentGeneration;
+        int _currentGeneration = 0;
 
         public IReadOnlyDictionary<int,SortedList<double,IGenome<GT>>> History
         {
-            get;
+            get
+            {
+                return new RODW(_generationHistory);
+            }
         }
+
+        public class ReadOnlyDictionary : IReadOnlyDictionary<int, SortedList<double, IGenome<GT>>>
+        {
+            Dictionary<int, SortedList<double, IGenome<GT>>> _ref;
+
+            protected ReadOnlyDictionary(Dictionary<int, SortedList<double, IGenome<GT>>> Reference)
+            {
+                _ref = Reference;
+            }
+
+            public SortedList<double, IGenome<GT>> this[int key]
+            {
+                get
+                {
+                    return _ref[key];
+                }
+            }
+
+            public int Count
+            {
+                get
+                {
+                    return _ref.Count;
+                }
+            }
+
+            public IEnumerable<int> Keys
+            {
+                get
+                {
+                    return _ref.Keys;
+                }
+            }
+
+            public IEnumerable<SortedList<double, IGenome<GT>>> Values
+            {
+                get
+                {
+                    return _ref.Values;
+                }
+            }
+
+            public bool ContainsKey(int key)
+            {
+                return _ref.ContainsKey(key);
+            }
+
+            public IEnumerator<KeyValuePair<int, SortedList<double, IGenome<GT>>>> GetEnumerator()
+            {
+                return _ref.GetEnumerator();
+            }
+
+            public bool TryGetValue(int key, out SortedList<double, IGenome<GT>> value)
+            {
+                return _ref.TryGetValue(key, out value);
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return _ref.GetEnumerator();
+            }
+        }
+
+        private class RODW : ReadOnlyDictionary
+        {
+            public RODW(Dictionary<int, SortedList<double, IGenome<GT>>> Reference):base(Reference)
+            {
+
+            }
+        }
+    
 
 
         #region IGenericTeacher
@@ -41,21 +116,36 @@ public class GenericTeacher<GT> : IGeneticTeacher<GT>
         {
             get
             {
-                throw new NotImplementedException();
+                return _testF;
             }
             set
             {
-                throw new NotImplementedException();
+                _testF = value;
             }
         }
+
+        TestFunctionDelegate<IGenome<GT>> _testF;
 
         public IEnumerable<IGenome<GT>> CurrentPopulation
         {
             get
             {
-                throw new NotImplementedException();
+                return _currentPopulation;
             }
         }
+
+        public SortedList<double, IGenome<GT>> AddNewGeneration(List<IGenome<GT>> Generation)
+        {
+            if(_lastTests != null)
+            {
+                _generationHistory.Add(_currentGeneration, _lastTests);
+                _lastTests = null;
+            }
+            _currentPopulation = Generation;
+            _currentGeneration++;
+            return PassTests();
+        }
+
 
         public SortedList<double, IGenome<GT>> PassTests()
         {
@@ -70,23 +160,28 @@ public class GenericTeacher<GT> : IGeneticTeacher<GT>
                  }
              });
             _lastTests = result;
-            _generationHistory.Add(_currentGeneration, result);
+            //_generationHistory.Add(_currentGeneration, result);
             return result;
         }
 
-        public List<IGenome<GT>> PassGeneration()
+        public List<IGenome<GT>> GetNewGenerationPopulation()
         {
             if(_lastTests != null)
             {
 
                 List<IGenome<GT>> newGeneration = new List<IGenome<GT>>();
 
+                newGeneration.Add(_lastTests[_lastTests.Count-1].Copy());
+
+                _lastTests.RemoveAt(0);
+
                 Parallel.ForEach(_lastTests, x =>
                  {
                      IGenome<GT> curGen = x.Value;
                      double curResults = x.Key;
 
-                     double structureMutationChance = Math.Abs(curGen.LastResult - curGen.ParentResult) * ScoreMK + UsualMK / curGen.StructuralMutations * StructuralMK + curGen.Complexity * ComplexityMK;
+                     double structureMutationChance = Math.Abs(curGen.LastResult - curGen.ParentResult) * ScoreMK + UsualMK 
+                        / curGen.StructuralMutations * StructuralMK + curGen.Complexity * ComplexityMK;
 
                      if(random.NextDouble() < structureMutationChance)
                      {
@@ -95,7 +190,6 @@ public class GenericTeacher<GT> : IGeneticTeacher<GT>
                      {
                          newGeneration.Add(curGen.ProceedNonStructuralMutation());
                      }
-
 
                  });
 

@@ -4,132 +4,527 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
+using System.Collections;
 
 namespace EvolutionNetwork.NeuroNet
 {
-    public class CNeuroNetWrapper
+    public class CNeuroNetWrapper : IDisposable
     {
-        [DllImport("kernel32.dll")]
-        static extern IntPtr LoadLibrary(string dllToLoad);
-
-        [DllImport("kernel32.dll")]
-        static extern IntPtr GetProcAddress(IntPtr hModule, string procedureName);
-
-        [DllImport("kernel32.dll")]
-        static extern bool FreeLibrary(IntPtr hModule);
-
-        const string DllPath = "DLLs";
-        const string DllCont = "CNeuroNet{0}.dll";
-
-        /// <summary>
-        /// Pointer to a loaded DLL
-        /// </summary>
-        static IntPtr LibPTR;
 
 
-        /*delegate IntPtr AddNodeDelegate(IntPtr pointerToANet, int NodeID);
-        delegate IntPtr AddConnectionDelegate(IntPtr pointerToANet, int from, int to, double weight);
-
-        delegate IntPtr ComputeDelegate(IntPtr pointerToANet);
-        delegate IntPtr NewNeuroNetDelegate(int numInputs, int numOtputs);*/
-
-
-        delegate void FreeNeuroNetDelegate(IntPtr pointerToANet);
-
-
-       /* delegate double GetConnectionWeightDelegate(IntPtr con);*/
-        delegate void ChangeConnectionWeightDelegate(IntPtr con, double newWeight);
-
-        /*delegate IntPtr FindNodeByIDDelegate(IntPtr pointerToANet, int ID);
-        delegate IntPtr FindConnectionDelegate(IntPtr pointerToANet, int from, int to);
-
-        delegate int RemoveNodeDelegate(IntPtr pointerToANet, int ID);
-        delegate int RemoveConnectionDelegate(IntPtr pointerToANet, int from, int to);*/
-
-
-        static Func<IntPtr,int,IntPtr> __AddNode;
-        static Func<IntPtr,int,int,double,IntPtr> __AddConnection;
-        static Func<IntPtr, IntPtr> __Compute;
-        static Func<int, int, IntPtr> __NewNeuroNet;
-        static FreeNeuroNetDelegate __FreeNeuroNet;
-        static Func<IntPtr,double> __GetWeight;
-        static ChangeConnectionWeightDelegate __ChangeWeight;
-        static Func<IntPtr,int,IntPtr> __FindNode;
-        static Func<IntPtr,int,int,IntPtr> __FindConnection;
-        static Func<IntPtr,int,int> __RemoveNode;
-        static Func<IntPtr,int,int,int> __RemoveConnection;
-
-
-
-        
-
-        static CNeuroNetWrapper()
+        public struct Node
         {
-            string pv = "x86";
-            if(Environment.Is64BitProcess)
+            public int ID
             {
-                pv = "x64";
+                get
+                {
+                    return _id;
+                }
             }
-            string filePath = string.Format("{1}\\{2}",Environment.CurrentDirectory ,DllPath, string.Format(DllCont, pv));
 
-            IntPtr libPtr = LoadLibrary(filePath);
-            if(libPtr == IntPtr.Zero)
+            int _id;
+
+            public Node(int ID)
             {
-                throw new PlatformNotSupportedException("Can't load CNeuroNet DDL");
+                _id = ID;
             }
-            LibPTR = libPtr;
 
-            __AddConnection = 
-                Marshal.GetDelegateForFunctionPointer<Func<IntPtr, int, int, double, IntPtr>>
-                (GetProcAddress(LibPTR, "AddConnection"));
-
-            __AddNode = Marshal.GetDelegateForFunctionPointer<Func<IntPtr, int, IntPtr>>
-                (GetProcAddress(LibPTR, "AddNode"));
-
-            __Compute = Marshal.GetDelegateForFunctionPointer<Func<IntPtr, IntPtr>>
-                (GetProcAddress(LibPTR, "Compute"));
-
-            __NewNeuroNet = Marshal.GetDelegateForFunctionPointer<Func<int, int, IntPtr>>
-                (GetProcAddress(LibPTR, "NewNeuroNet"));
-
-            
-            __FreeNeuroNet = Marshal.GetDelegateForFunctionPointer<FreeNeuroNetDelegate>
-                (GetProcAddress(LibPTR, "FreeNeuroNet"));
-
-
-            __GetWeight = Marshal.GetDelegateForFunctionPointer<Func<IntPtr, double>>
-                (GetProcAddress(LibPTR, "GetConnectionWeight"));
-
-            __ChangeWeight = Marshal.GetDelegateForFunctionPointer<ChangeConnectionWeightDelegate>
-                (GetProcAddress(LibPTR, "ChangeConnectionWeight"));
-
-            __FindNode = Marshal.GetDelegateForFunctionPointer<Func<IntPtr, int, IntPtr>>
-                (GetProcAddress(LibPTR, "FindNodeByID"));
-
-            __FindConnection = Marshal.GetDelegateForFunctionPointer<Func<IntPtr, int, int, IntPtr>>
-                (GetProcAddress(LibPTR, "FindConnection"));
-
-            __RemoveNode = Marshal.GetDelegateForFunctionPointer<Func<IntPtr, int, int>>
-                (GetProcAddress(LibPTR, "RemoveNode"));
-
-            __RemoveConnection = Marshal.GetDelegateForFunctionPointer<Func<IntPtr, int, int, int>>
-                (GetProcAddress(LibPTR, "RemoveConnection"));
         }
 
+        public class NodesCollection : ICollection<Node>,  IEnumerable<Node>
+        {
+            public class NodeEnumerator : IEnumerator<Node>
+            {
+                IntPtr _enumPtr = IntPtr.Zero;
+
+                protected NodeEnumerator(IntPtr enumPointer)
+                {
+                    _enumPtr = enumPointer;
+                }
+
+                public Node Current
+                {
+                    get
+                    {
+                        return new Node(CNeuroNetWrapperFunctions.__GetNodeID(CNeuroNetWrapperFunctions.__GetEnumeratorCurrent(_enumPtr)));
+                    }
+                }
+
+                object IEnumerator.Current
+                {
+                    get
+                    {
+                        return new Node(CNeuroNetWrapperFunctions.__GetNodeID(CNeuroNetWrapperFunctions.__GetEnumeratorCurrent(_enumPtr)));
+                    }
+                }
+
+                public void Dispose()
+                {
+                    Marshal.FreeHGlobal(_enumPtr);
+                    _enumPtr = IntPtr.Zero;
+                }
+
+                public bool MoveNext()
+                {
+                    return CNeuroNetWrapperFunctions.__EnumeratorGoNext(_enumPtr) != 0;
+                }
+
+                public void Reset()
+                {
+                    CNeuroNetWrapperFunctions.__ResetEnumerator(_enumPtr);
+                }
+
+                ~NodeEnumerator()
+                {
+                    Dispose();
+                }
+            }
+
+            private class NEC:NodeEnumerator
+            {
+                public NEC(IntPtr ptr):base(ptr)
+                {
+
+                }
+            }
+
+
+            protected NodesCollection(IntPtr link)
+            {
+                net = link;
+            }
+            
+
+            public static NodesCollection GetLinkedConnection(IntPtr link)
+            {
+                NodesCollection c = null;
+
+                if(link != null)
+                {
+                    c = new NodesCollection(link);
+                }
+
+
+                return c;
+            }
+
+
+            IntPtr net;
+            public int Count
+            {
+                get
+                {
+                    return CNeuroNetWrapperFunctions.__GetNodesCount(net);
+                }
+            }
+
+            public bool IsReadOnly
+            {
+                get
+                {
+                    return false;
+                }
+            }
+
+            public void Add(Node item)
+            {
+                CNeuroNetWrapperFunctions.__AddNode(net, item.ID);
+            }
+
+            public void Clear()
+            {
+                CNeuroNetWrapperFunctions.__ClearNodes(net);
+            }
+
+            public bool Contains(Node item)
+            {
+                return CNeuroNetWrapperFunctions.__FindNode(net, item.ID) != IntPtr.Zero;
+            }
+
+
+            public void CopyTo(Node[] array, int arrayIndex)
+            {
+                int i = 0;
+                foreach (var n in this)
+                {
+                    array[arrayIndex + i++] = n;
+                }
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return new NEC(CNeuroNetWrapperFunctions.__GetEnumerator(CNeuroNetWrapperFunctions.__GetNodes(net)));
+            }
+
+            public IEnumerator<Node> GetEnumerator()
+            {
+                return new NEC(CNeuroNetWrapperFunctions.__GetEnumerator(CNeuroNetWrapperFunctions.__GetNodes(net)));
+            }
+
+            public bool Remove(Node item)
+            {
+                return CNeuroNetWrapperFunctions.__RemoveNode(net, item.ID) != 0;
+            }
+        }
+
+        public class Connection
+        {
+            public int From
+            {
+                get
+                {
+                    if (_link != IntPtr.Zero)
+                    {
+                        return CNeuroNetWrapperFunctions.__GetConnectionFrom(_link);
+                    }
+                    else
+                    {
+                        return _from;
+                    }
+                }
+                set
+                {
+                    if (_link != IntPtr.Zero)
+                    {
+                        int to = CNeuroNetWrapperFunctions.__GetConnectionTo(_link);
+                        int from = CNeuroNetWrapperFunctions.__GetConnectionFrom(_link);
+                        double w = CNeuroNetWrapperFunctions.__GetWeight(_link);
+                        CNeuroNetWrapperFunctions.__RemoveConnection(_neuroNet,from,to);
+                        _link = CNeuroNetWrapperFunctions.__AddConnection(_neuroNet, value, to, w);
+                        if (_link == IntPtr.Zero)
+                        {
+                            throw new ArgumentNullException("Node with that ID does not exists in CNeuroNet");
+                        }
+                    }
+                    else
+                    {
+                        _from = value;
+                    }
+                }
+            }
+            public int To
+            {
+                get
+                {
+                    if (_link != IntPtr.Zero)
+                    {
+                        return CNeuroNetWrapperFunctions.__GetConnectionTo(_link);
+                    }
+                    else
+                    {
+                        return _to;
+                    }
+                }
+                set
+                {
+                    if (_link != IntPtr.Zero)
+                    {
+                        /*
+                            CNeuroNetWrapperFunctions.__SetConnectionFromTo(_link, CNeuroNetWrapperFunctions.__GetConnectionFrom(_link), value);
+                        */
+                        int to = CNeuroNetWrapperFunctions.__GetConnectionTo(_link);
+                        int from = CNeuroNetWrapperFunctions.__GetConnectionFrom(_link);
+                        double w = CNeuroNetWrapperFunctions.__GetWeight(_link);
+                        CNeuroNetWrapperFunctions.__RemoveConnection(_neuroNet, from, to);
+                        _link = CNeuroNetWrapperFunctions.__AddConnection(_neuroNet, from, value, w);
+                        if(_link == IntPtr.Zero)
+                        {
+                            throw new ArgumentNullException("Node with that ID does not exists in CNeuroNet");
+                        }
+
+                    }
+                    else
+                    {
+                        _to = value;
+                    }
+                }
+            }
+
+            public double Weight
+            {
+                get
+                {
+                    if (_link != IntPtr.Zero)
+                    {
+                        return CNeuroNetWrapperFunctions.__GetWeight(_link);
+                    }
+                    else
+                    {
+                        return _weight;
+                    }
+                }
+                set
+                {
+                    if (_link != IntPtr.Zero)
+                    {
+                        CNeuroNetWrapperFunctions.__ChangeWeight(_link, value);
+                    }
+                    else
+                    {
+                        _weight = value;
+                    }
+                }
+            }
+
+            int _from;
+            int _to;
+            double _weight;
+            IntPtr _link;
+            IntPtr _neuroNet;
+
+            public Connection(int from, int to, double weight)
+            {
+                this._from = from;
+                this._to = to;
+                this._weight = weight;
+                this._link = IntPtr.Zero;
+            }
+
+            Connection(IntPtr con, IntPtr net)
+            {
+                _link = con;
+                _neuroNet = net;
+            }
+
+            public static Connection GetLinkedConnection(IntPtr connectionPointer, IntPtr neuroNetPointer)
+            {
+                Connection c = null;
+
+                if (connectionPointer != IntPtr.Zero)
+                {
+                    c = new Connection(connectionPointer,neuroNetPointer);
+                }
+
+                return c;
+            }
+
+        }
+
+
+        public class ConnectionsCollection : ICollection<Connection>, IEnumerable<Connection>
+        {
+
+            protected ConnectionsCollection(IntPtr link)
+            {
+                net = link;
+            }
+
+            public static ConnectionsCollection GetLinkedCollection(IntPtr ptr)
+            {
+                ConnectionsCollection c = null;
+
+                if(ptr != IntPtr.Zero)
+                {
+                    c = new ConnectionsCollection(ptr);
+                }
+
+                return c;
+            }
+            IntPtr net;
+            public int Count
+            {
+                get
+                {
+                    return CNeuroNetWrapperFunctions.__GetConnectionsCount(net);
+                }
+            }
+
+            public bool IsReadOnly
+            {
+                get
+                {
+                    return false;
+                }
+            }
+
+            public void Add(Connection item)
+            {
+                CNeuroNetWrapperFunctions.__AddConnection(net, item.From, item.To, item.Weight);
+            }
+
+            public void Clear()
+            {
+                CNeuroNetWrapperFunctions.__ClearConnections(net);
+            }
+
+            public bool Contains(Connection item)
+            {
+                return CNeuroNetWrapperFunctions.__FindConnection(net, item.From, item.To) != IntPtr.Zero;
+            }
+
+            public void CopyTo(Connection[] array, int arrayIndex)
+            {
+                int i = 0;
+                foreach (var v in this)
+                {
+                    array[i] = new Connection(v.From, v.To, v.Weight);
+                }
+            }
+
+            public class ConnectionsEnumerator : IEnumerator<Connection>
+            {
+                IntPtr enumPtr;
+                IntPtr neuroNetPtr;
+
+                protected ConnectionsEnumerator(IntPtr ptr, IntPtr neuroNetPtr)
+                {
+                    this.enumPtr = ptr;
+                    this.neuroNetPtr = neuroNetPtr;
+                }
+
+                public Connection Current
+                {
+                    get
+                    {
+                        return Connection.GetLinkedConnection(CNeuroNetWrapperFunctions.__GetEnumeratorCurrent(enumPtr),neuroNetPtr);
+                    }
+                }
+
+                object IEnumerator.Current
+                {
+                    get
+                    {
+                        return Current;
+                    }
+                }
+
+                public void Dispose()
+                {
+                    Marshal.FreeHGlobal(enumPtr);
+                }
+
+                public bool MoveNext()
+                {
+                    return CNeuroNetWrapperFunctions.__EnumeratorGoNext(enumPtr) != 0;
+                }
+
+                public void Reset()
+                {
+                    CNeuroNetWrapperFunctions.__ResetEnumerator(enumPtr);
+                }
+                ~ConnectionsEnumerator()
+                {
+                    Dispose();
+                }
+            }
+
+            private class CEP : ConnectionsEnumerator
+            {
+                public CEP(IntPtr ptr, IntPtr nnPtr) : base(ptr,nnPtr)
+                {
+
+                }
+            }
+
+
+
+            public IEnumerator<Connection> GetEnumerator()
+            {
+                return new CEP(CNeuroNetWrapperFunctions.__GetEnumerator(CNeuroNetWrapperFunctions.__GetConnections(net)),net);
+            }
+
+            public bool Remove(Connection item)
+            {
+                return CNeuroNetWrapperFunctions.__RemoveConnection(net, item.From, item.To) != 0;
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return new CEP(CNeuroNetWrapperFunctions.__GetEnumerator(CNeuroNetWrapperFunctions.__GetConnections(net)), net);
+            }
+        }
+
+
+
+
+
+
+
+
         private IntPtr _cnet;
+
+        public int InputsCount
+        {
+            get
+            {
+                return _numInputs;
+            }
+        }
+        public int OutputsCount
+        {
+            get
+            {
+                return _numOutputs;
+            }
+        }
+
         
+
+        int _numInputs;
+        int _numOutputs;
+
+        ConnectionsCollection _connections;
+
+        NodesCollection _nodes;
+       
+
+
+        public ConnectionsCollection Connections
+        {
+            get
+            {
+                return _connections;
+            }
+        }
+
+        public NodesCollection Nodes
+        {
+            get
+            {
+                return _nodes;
+            }
+        }
 
         public CNeuroNetWrapper(int numInputs, int numOutputs)
         {
-            _cnet = __NewNeuroNet(numInputs, numOutputs);
+            _cnet = CNeuroNetWrapperFunctions.__NewNeuroNet(numInputs, numOutputs);
+            _numInputs = numInputs;
+            _numOutputs = numOutputs;
+            _connections = ConnectionsCollection.GetLinkedCollection(_cnet);
+            _nodes = NodesCollection.GetLinkedConnection(_cnet);
         }
-        
+
+        public CNeuroNetWrapper(CNeuroNetWrapper copy)
+        {
+
+            _numInputs = copy._numInputs;
+            _numOutputs = copy._numOutputs;
+
+            _cnet = CNeuroNetWrapperFunctions.__NewNeuroNet(_numInputs, _numOutputs);
+
+            foreach(var n in copy.Nodes)
+            {
+                if(n.ID > _numInputs + _numOutputs)
+                {
+                    CNeuroNetWrapperFunctions.__AddNode(_cnet, n.ID);
+                }
+            }
+
+            foreach (var c in copy.Connections)
+            {
+                CNeuroNetWrapperFunctions.__AddConnection(_cnet, c.From, c.To, c.Weight);
+            }
+            
+            
+            _connections = ConnectionsCollection.GetLinkedCollection(_cnet);
+            _nodes = NodesCollection.GetLinkedConnection(_cnet);
+        }
 
         public bool AddNode(int ID)
         {
-            if(__FindNode(_cnet,ID) == IntPtr.Zero)
+            if (CNeuroNetWrapperFunctions.__FindNode(_cnet, ID) == IntPtr.Zero)
             {
-                __AddNode(_cnet, ID);
+                CNeuroNetWrapperFunctions.__AddNode(_cnet, ID);
                 return true;
             }
             return false;
@@ -137,9 +532,9 @@ namespace EvolutionNetwork.NeuroNet
 
         public bool AddConnection(int from, int to, double weight)
         {
-            if(__FindConnection(_cnet,from,to) == IntPtr.Zero)
+            if (CNeuroNetWrapperFunctions.__FindConnection(_cnet, from, to) == IntPtr.Zero)
             {
-                __AddConnection(_cnet, from, to, weight);
+                CNeuroNetWrapperFunctions.__AddConnection(_cnet, from, to, weight);
                 return true;
             }
             return false;
@@ -147,22 +542,60 @@ namespace EvolutionNetwork.NeuroNet
 
 
 
-        public double[] Compute()
+        public double[] Compute(double[] inputs)
         {
-            double[] res
-            IntPtr res = __Compute(_cnet);
-        }
-        
+            double[] res = new double[this.OutputsCount];
 
+            double[] topass = new double[this.InputsCount];
+
+            for(int i = 0;i< topass.Length; ++i)
+            {
+                if(i< inputs.Length)
+                {
+                    topass[i] = inputs[i];
+                }else
+                {
+                    topass[i] = 0.0;
+                }
+            }
+
+            IntPtr arr = Marshal.AllocHGlobal(topass.Length * sizeof(double));
+            Marshal.Copy(topass, 0, arr, topass.Length);
+
+            try
+            {
+                CNeuroNetWrapperFunctions.__InitInputs(_cnet, arr);
+            }
+            catch (System.Exception ex)
+            {
+                throw new Exception("Error during initialization",ex);
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(arr);
+            }
+
+            IntPtr cres = CNeuroNetWrapperFunctions.__Compute(_cnet);
+
+            Marshal.Copy(cres, res, 0, res.Length);
+            Marshal.FreeHGlobal(cres);
+
+            return res;
+        }
+
+        public void Dispose()
+        {
+            CNeuroNetWrapperFunctions.__FreeNeuroNet(_cnet);
+        }
 
         ~CNeuroNetWrapper()
         {
-            CNeuroNetWrapper.__FreeNeuroNet(_cnet);
+            Dispose();
         }
 
 
 
-        
+
 
     }
 }

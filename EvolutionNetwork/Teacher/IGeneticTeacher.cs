@@ -29,6 +29,8 @@ namespace EvolutionNetwork.Teacher
             get;
         }
 
+
+
         /// <summary>
         /// Pass the tests and save the results.
         /// </summary>
@@ -37,7 +39,7 @@ namespace EvolutionNetwork.Teacher
         /// <summary>
         /// Passing generation, according to the results.
         /// </summary>
-        List<IGenome<GT>> PassGeneration();
+        List<IGenome<GT>> GetNewGenerationPopulation();
         
     }
 }
