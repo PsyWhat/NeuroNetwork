@@ -180,8 +180,8 @@ public class GenericTeacher<GT> : IGeneticTeacher<GT>
                      IGenome<GT> curGen = x.Value;
                      double curResults = x.Key;
 
-                     double structureMutationChance = Math.Abs(curGen.LastResult - curGen.ParentResult) * ScoreMK + UsualMK 
-                        / curGen.StructuralMutations * StructuralMK + curGen.Complexity * ComplexityMK;
+                     double structureMutationChance = (Math.Abs(curGen.LastResult - curGen.ParentResult) * ScoreMK + UsualMK)
+                        / (curGen.StructuralMutations * StructuralMK + curGen.Complexity * ComplexityMK);
 
                      if(random.NextDouble() < structureMutationChance)
                      {
