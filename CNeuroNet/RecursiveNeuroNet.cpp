@@ -927,3 +927,17 @@ void InitInputs( NeuroNet* net , double *values )
 	}
 }
 
+MY_EXPORT void FlushNet( NeuroNet *net )
+{
+	ListElement *le;
+	if ( net != NULL && net->nodes != NULL )
+	{
+		le = net->nodes;
+		while ( le != NULL )
+		{
+			((Node*)(le->element))->Value = 0;
+			le = le->next;
+		}
+	}
+}
+

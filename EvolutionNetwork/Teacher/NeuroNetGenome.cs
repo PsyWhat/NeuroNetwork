@@ -35,6 +35,11 @@ namespace EvolutionNetwork.Teacher
             LastResult = 0;
         }
 
+        public double[] Calculate(double[] data)
+        {
+            return _neuroNet.Compute(data);
+        }
+
         public NeuroNetGenome(NeuroNetGenome copy)
         {
             this._neuroNet = new CNeuroNetWrapper(copy._neuroNet);
@@ -161,6 +166,11 @@ namespace EvolutionNetwork.Teacher
             copy._nonStructuralMutations = 0;
 
             return copy;
+        }
+
+        public void Flush()
+        {
+            _neuroNet.Flush();
         }
     }
 }

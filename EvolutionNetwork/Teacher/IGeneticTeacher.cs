@@ -10,11 +10,11 @@ namespace EvolutionNetwork.Teacher
     /*where GT : IGenome<GT>;*/
 
 
-    public interface IGeneticTeacher<GT>
-        where GT : IGenome<GT>
+    public interface IGeneticTeacher<GT,Type>
+        where GT : IGenome<Type>
     {
 
-        TestFunctionDelegate<IGenome<GT>> TestFunction
+        TestFunctionDelegate<GT> TestFunction
         {
             get;
             set;
@@ -24,7 +24,7 @@ namespace EvolutionNetwork.Teacher
         /// <summary>
         /// Current population of the genome.
         /// </summary>
-        IEnumerable<IGenome<GT>> CurrentPopulation
+        IEnumerable<GT> CurrentPopulation
         {
             get;
         }
@@ -34,12 +34,12 @@ namespace EvolutionNetwork.Teacher
         /// <summary>
         /// Pass the tests and save the results.
         /// </summary>
-        SortedList<double, IGenome<GT>> PassTests();
+        List<Tuple<double, GT>> PassTests();
 
         /// <summary>
         /// Passing generation, according to the results.
         /// </summary>
-        List<IGenome<GT>> GetNewGenerationPopulation();
+        List<GT> GetNewGenerationPopulation();
         
     }
 }

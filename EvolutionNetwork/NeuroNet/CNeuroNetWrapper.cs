@@ -390,7 +390,11 @@ namespace EvolutionNetwork.NeuroNet
 
                 public void Dispose()
                 {
-                    Marshal.FreeHGlobal(enumPtr);
+                    if (enumPtr != IntPtr.Zero)
+                    {
+                        Marshal.FreeHGlobal(enumPtr);
+                        enumPtr = IntPtr.Zero;
+                    }
                 }
 
                 public bool MoveNext()
@@ -593,7 +597,10 @@ namespace EvolutionNetwork.NeuroNet
             Dispose();
         }
 
-
+        public void Flush()
+        {
+            CNeuroNetWrapperFunctions.__FlushNeuroNet(_cnet);
+        }
 
 
 

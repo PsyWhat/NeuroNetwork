@@ -29,39 +29,42 @@ namespace EvolutionNetwork
         static void Main()
         {
 
-            AllocConsole();
+            Application.EnableVisualStyles();
+            Application.Run(new Form1());
+
+            /* AllocConsole();*/
 
 
-          /*  FileStream fs;
-            byte[] buff = null;
-            try
-            {
-                fs = File.Open("e:\\e.e", FileMode.Open);
-                fs.Seek(0, SeekOrigin.Begin);
-                buff = new byte[1024 * 1024 * 50];
-                fs.Read(buff, 0, buff.Length);
-                fs.Close();
-            }
-            catch (System.Exception ex)
-            {
-                Console.WriteLine("Error: \"{0}\"", ex);
-            }
-            try
-            {
+            /*  FileStream fs;
+              byte[] buff = null;
+              try
+              {
+                  fs = File.Open("e:\\e.e", FileMode.Open);
+                  fs.Seek(0, SeekOrigin.Begin);
+                  buff = new byte[1024 * 1024 * 50];
+                  fs.Read(buff, 0, buff.Length);
+                  fs.Close();
+              }
+              catch (System.Exception ex)
+              {
+                  Console.WriteLine("Error: \"{0}\"", ex);
+              }
+              try
+              {
 
-                if (buff != null)
-                {
-                    NeuroNet net = NeuroNet.FromByteArray(buff);
-                }
-            }
-            catch (System.Exception ex)
-            {
-                Console.WriteLine("Error: \"{0}\"", ex);
-            }*/
+                  if (buff != null)
+                  {
+                      NeuroNet net = NeuroNet.FromByteArray(buff);
+                  }
+              }
+              catch (System.Exception ex)
+              {
+                  Console.WriteLine("Error: \"{0}\"", ex);
+              }*/
 
 
 
-            Teacher tsd = new Teacher(1241, 10, 10.0f, 0.3f, 0.9f);
+            /*Teacher tsd = new Teacher(1241, 10, 10.0f, 0.3f, 0.9f);
             var tsdn = tsd.ET.GenerateNeuroNet(3, 13);
             for(int i = 0;i<100;++i)
             {
@@ -385,7 +388,7 @@ namespace EvolutionNetwork
                         isselected = false;
                         t.pause = false;
                     }
-                }
-            }
+                }*/
         }
     }
+}

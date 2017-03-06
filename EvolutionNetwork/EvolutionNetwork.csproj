@@ -5,7 +5,7 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{A577EBCA-2493-4433-85B0-2D52FCF6B0E5}</ProjectGuid>
-    <OutputType>Exe</OutputType>
+    <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>EvolutionNetwork</RootNamespace>
     <AssemblyName>EvolutionNetwork</AssemblyName>
@@ -105,7 +105,7 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup>
-    <StartupObject />
+    <StartupObject>EvolutionNetwork.Program</StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -116,12 +116,19 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BalanceTask.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="BalanceTask.Designer.cs">
+      <DependentUpon>BalanceTask.cs</DependentUpon>
+    </Compile>
     <Compile Include="NeuroNet\CNeuroNetWrapper.cs" />
     <Compile Include="NeuroNet\CNeuroNetWrapperFunctions.cs" />
     <Compile Include="Teacher\GenericTeacher.cs" />
     <Compile Include="Teacher\IGeneticTeacher.cs" />
     <Compile Include="Teacher\NeuroNetGenome.cs" />
-    <Compile Include="TestProgram.cs" />
+    <Compile Include="Tester.cs" />
+    <None Include="TestProgram.cs" />
     <None Include="Mutation.cs" />
     <Compile Include="Teacher\IGenome.cs" />
     <None Include="Vector2.cs" />
@@ -133,9 +140,12 @@
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
     <Compile Include="CSNeuroNet.cs" />
-    <None Include="Program.cs" />
+    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <None Include="Teacher.cs" />
+    <EmbeddedResource Include="Form1.resx">
+      <DependentUpon>Form1.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>

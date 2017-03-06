@@ -63,6 +63,8 @@ namespace EvolutionNetwork.Teacher
 
 
 
+        void Flush();
+
         /// <summary>
         /// Proceeds structural mutation and return the result of it.
         /// </summary>

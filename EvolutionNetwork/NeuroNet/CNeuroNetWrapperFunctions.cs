@@ -70,6 +70,8 @@ namespace EvolutionNetwork.NeuroNet
 
         public delegate void InitInputsDelegate(IntPtr net, IntPtr arr);
 
+        public delegate void FlushNeuroNetDelegate(IntPtr net);
+
 
 
         public static AddNodeDelegate __AddNode;
@@ -106,6 +108,8 @@ namespace EvolutionNetwork.NeuroNet
         public static GetCountDelegate __GetConnectionsCount;
 
         public static InitInputsDelegate __InitInputs;
+
+        public static FlushNeuroNetDelegate __FlushNeuroNet;
 
 
 
@@ -234,6 +238,10 @@ namespace EvolutionNetwork.NeuroNet
 
             __InitInputs = Marshal.GetDelegateForFunctionPointer<InitInputsDelegate>
                 (GetProcAddress(LibPTR, "InitInputs"));
+
+
+            __FlushNeuroNet = Marshal.GetDelegateForFunctionPointer<FlushNeuroNetDelegate>
+                (GetProcAddress(LibPTR, "FlushNet"));
 
 
             /*

@@ -155,6 +155,8 @@ extern "C"
 
 	MY_EXPORT double* Compute( NeuroNet* net );
 
+	MY_EXPORT void FlushNet( NeuroNet *net );
+
 	MY_EXPORT Node* AddNode( NeuroNet* net , int ID );
 	MY_EXPORT Connection* AddConnection( NeuroNet *net , int from , int to , double weight );
 	MY_EXPORT NeuroNet* NewNeuroNet( int numInputs , int numOutputs );
