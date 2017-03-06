@@ -31,6 +31,7 @@
             this.passGenerationBtn = new System.Windows.Forms.Button();
             this.generateNewBtn = new System.Windows.Forms.Button();
             this.panel1 = new System.Windows.Forms.Panel();
+            this.status = new System.Windows.Forms.Label();
             this.IndividualSelector = new System.Windows.Forms.NumericUpDown();
             this.cpyGenerationBtn = new System.Windows.Forms.Button();
             this.populationCount = new System.Windows.Forms.TextBox();
@@ -43,10 +44,12 @@
             this.structmcTB = new System.Windows.Forms.TextBox();
             this.complexitymcTB = new System.Windows.Forms.TextBox();
             this.button1 = new System.Windows.Forms.Button();
+            this.label5 = new System.Windows.Forms.Label();
             this.balanceTask2 = new EvolutionNetwork.BalanceTask();
-            this.status = new System.Windows.Forms.Label();
+            this.generationsToPass = new System.Windows.Forms.NumericUpDown();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.IndividualSelector)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.generationsToPass)).BeginInit();
             this.SuspendLayout();
             // 
             // passGenerationBtn
@@ -77,9 +80,11 @@
             // 
             // panel1
             // 
+            this.panel1.Controls.Add(this.label5);
             this.panel1.Controls.Add(this.status);
             this.panel1.Controls.Add(this.IndividualSelector);
             this.panel1.Controls.Add(this.cpyGenerationBtn);
+            this.panel1.Controls.Add(this.generationsToPass);
             this.panel1.Controls.Add(this.passGenerationBtn);
             this.panel1.Controls.Add(this.populationCount);
             this.panel1.Controls.Add(this.generateNewBtn);
@@ -91,10 +96,21 @@
             this.panel1.TabIndex = 3;
             this.panel1.Visible = false;
             // 
+            // status
+            // 
+            this.status.AutoSize = true;
+            this.status.Dock = System.Windows.Forms.DockStyle.Top;
+            this.status.Location = new System.Drawing.Point(0, 195);
+            this.status.MaximumSize = new System.Drawing.Size(86, 0);
+            this.status.Name = "status";
+            this.status.Size = new System.Drawing.Size(35, 13);
+            this.status.TabIndex = 15;
+            this.status.Text = "label5";
+            // 
             // IndividualSelector
             // 
             this.IndividualSelector.Dock = System.Windows.Forms.DockStyle.Top;
-            this.IndividualSelector.Location = new System.Drawing.Point(0, 155);
+            this.IndividualSelector.Location = new System.Drawing.Point(0, 175);
             this.IndividualSelector.Maximum = new decimal(new int[] {
             1,
             0,
@@ -117,7 +133,7 @@
             // cpyGenerationBtn
             // 
             this.cpyGenerationBtn.Dock = System.Windows.Forms.DockStyle.Top;
-            this.cpyGenerationBtn.Location = new System.Drawing.Point(0, 110);
+            this.cpyGenerationBtn.Location = new System.Drawing.Point(0, 130);
             this.cpyGenerationBtn.Name = "cpyGenerationBtn";
             this.cpyGenerationBtn.Size = new System.Drawing.Size(86, 45);
             this.cpyGenerationBtn.TabIndex = 3;
@@ -132,6 +148,7 @@
             this.populationCount.Name = "populationCount";
             this.populationCount.Size = new System.Drawing.Size(86, 20);
             this.populationCount.TabIndex = 13;
+            this.populationCount.Text = "5";
             // 
             // smcTB
             // 
@@ -211,6 +228,18 @@
             this.button1.UseVisualStyleBackColor = true;
             this.button1.Click += new System.EventHandler(this.button1_Click);
             // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Dock = System.Windows.Forms.DockStyle.Top;
+            this.label5.Location = new System.Drawing.Point(0, 208);
+            this.label5.MaximumSize = new System.Drawing.Size(86, 0);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(86, 52);
+            this.label5.TabIndex = 16;
+            this.label5.Text = "label5 asdasdasdasdasd asdasd sadas asd";
+            this.label5.Visible = false;
+            // 
             // balanceTask2
             // 
             this.balanceTask2.BackColor = System.Drawing.SystemColors.ButtonShadow;
@@ -221,14 +250,29 @@
             this.balanceTask2.TabIndex = 13;
             this.balanceTask2.Text = "balanceTask2";
             // 
-            // status
+            // generationsToPass
             // 
-            this.status.AutoSize = true;
-            this.status.Location = new System.Drawing.Point(3, 178);
-            this.status.Name = "status";
-            this.status.Size = new System.Drawing.Size(35, 13);
-            this.status.TabIndex = 15;
-            this.status.Text = "label5";
+            this.generationsToPass.Dock = System.Windows.Forms.DockStyle.Top;
+            this.generationsToPass.Location = new System.Drawing.Point(0, 110);
+            this.generationsToPass.Maximum = new decimal(new int[] {
+            1000,
+            0,
+            0,
+            0});
+            this.generationsToPass.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.generationsToPass.Name = "generationsToPass";
+            this.generationsToPass.Size = new System.Drawing.Size(86, 20);
+            this.generationsToPass.TabIndex = 17;
+            this.generationsToPass.Value = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.generationsToPass.ValueChanged += new System.EventHandler(this.numericUpDown1_ValueChanged);
             // 
             // Form1
             // 
@@ -252,6 +296,7 @@
             this.panel1.ResumeLayout(false);
             this.panel1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.IndividualSelector)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.generationsToPass)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -277,6 +322,8 @@
         private BalanceTask balanceTask2;
         private System.Windows.Forms.NumericUpDown IndividualSelector;
         private System.Windows.Forms.Label status;
+        private System.Windows.Forms.Label label5;
+        private System.Windows.Forms.NumericUpDown generationsToPass;
     }
 }
 

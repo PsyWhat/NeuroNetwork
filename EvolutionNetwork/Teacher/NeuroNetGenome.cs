@@ -16,7 +16,10 @@ namespace EvolutionNetwork.Teacher
         int _nonStructuralMutations;
 
         CNeuroNetWrapper _neuroNet;
-
+        public EvolutionNetwork.NeuroNet.CNeuroNetWrapper NeuroNet
+        {
+            get { return _neuroNet; }
+        }
         int _totalnonStructuralMutations;
 
         int _structuralMutations;
@@ -112,7 +115,17 @@ namespace EvolutionNetwork.Teacher
             {
                 do
                 {
-                    c.Weight += GetRandom(copy._nonStructuralMutations);
+                    double ch = GetRandom(copy._nonStructuralMutations);
+                    if(Math.Abs(c.Weight + ch) < 2)
+                    {
+                        c.Weight += ch;
+                    }else
+                    {
+                        if(Math.Abs(c.Weight - ch) < 2)
+                        {
+                            c.Weight -= ch;
+                        }
+                    }
                 } while (c.Weight > 2 || c.Weight < -2);
             }
             copy._nonStructuralMutations += 1;
@@ -164,6 +177,7 @@ namespace EvolutionNetwork.Teacher
 
             copy._structuralMutations += 1;
             copy._nonStructuralMutations = 0;
+            copy.ParentResult = this.LastResult;
 
             return copy;
         }

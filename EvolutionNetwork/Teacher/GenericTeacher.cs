@@ -208,19 +208,23 @@ public class GenericTeacher<GT, Type> : IGeneticTeacher<GT,Type>
                         newGeneration.Add((GT)_lastTests[_lastTests.Count - 1].Item2.Copy());
                         _lastTests.RemoveAt(0);
 
-                        Parallel.ForEach(_lastTests, x =>
+                        //Parallel.ForEach(_lastTests, x =>
+                        foreach(var x in _lastTests)
                          {
                              GT curGen = x.Item2;
                              double curResults = x.Item1;
 
-                             double structureMutationChance = (Math.Abs(curGen.LastResult - curGen.ParentResult) * ScoreMK + UsualMK + curGen.Complexity * ComplexityMK)
-                                / (curGen.StructuralMutations * StructuralMK);
+                             double structureMutationChance = 
+                             (Math.Abs(curGen.LastResult - curGen.ParentResult) * ScoreMK + 
+                             UsualMK + curGen.Complexity * ComplexityMK)
+                                / ((curGen.NonStructuralMutations+1) * StructuralMK);
 
-                             if (random.NextDouble() < structureMutationChance)
+                             if (random.NextDouble() > structureMutationChance)
                             {
                                  lock (newGeneration)
                                  {
-                                     newGeneration.Add((GT)curGen.ProceedStructuralMutation());
+                                var gta = curGen.ProceedStructuralMutation();
+                                     newGeneration.Add((GT)gta);
                                  }
                              }
                              else
@@ -231,7 +235,7 @@ public class GenericTeacher<GT, Type> : IGeneticTeacher<GT,Type>
                                  }
                              }
 
-                         });
+                         }//);
                     }
                 
 
